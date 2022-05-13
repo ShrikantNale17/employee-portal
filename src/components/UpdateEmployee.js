@@ -1,21 +1,29 @@
 import React, { useEffect, useState } from 'react'
 import TextField from '@mui/material/TextField';
-import { Autocomplete, Button, Card, CardContent, Checkbox, FormControl, FormControlLabel, FormGroup, FormHelperText, FormLabel, Grid, Radio, RadioGroup, Slider, Stack, TextareaAutosize, Typography } from '@mui/material';
+import { Autocomplete, Box, Button, Card, CardContent, Checkbox, FormControl, FormControlLabel, FormGroup, FormHelperText, FormLabel, Grid, Radio, RadioGroup, Slider, Typography } from '@mui/material';
 import axios from 'axios';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useForm, Controller } from 'react-hook-form';
+import AdapterDateFns from '@mui/lab/AdapterDateFns';
+import { LocalizationProvider, DatePicker } from '@mui/lab';
 
 
-function UpdateEmployee(props) {
+function UpdateEmployee() {
   const navigate = useNavigate()
   const location = useLocation()
 
   console.log(location.state)
 
-  const [auth_token, setAuth_token] = useState()
+  const { register, handleSubmit, control, formState: { errors }, getValues, setValue } = useForm({
+    mode: 'onChange',
+    defaultValues: location.state.row
+  })
+
+  const [auth_token, setAuth_token] = useState('')
   const [states, setStates] = useState([])
   const [cities, setCities] = useState([])
-  const [employee, setEmployee] = useState(location.state)
 
+  // console.log(employee.state);
   useEffect(() => {
 
     axios.get('https://www.universal-tutorial.com/api/getaccesstoken', {
@@ -28,15 +36,17 @@ function UpdateEmployee(props) {
       .then(res => {
         setAuth_token(res.data.auth_token)
         getStates(res.data.auth_token)
+        getCities(res.data.auth_token)
       })
   }, [])
   useEffect(() => {
-    if (employee.state !== '') {
-      getCities()
-
+    if (getValues('state') !== '' && cities.length > 0) {
+      console.log(cities)
+      getCities(auth_token)
+    } else {
+      setCities([])
     }
-
-  }, [employee.state])
+  }, [getValues('state')])
 
   const getStates = async (auth_token) => {
     const res = await axios.get('https://www.universal-tutorial.com/api/states/India', {
@@ -45,220 +55,334 @@ function UpdateEmployee(props) {
         "Accept": "application/json"
       }
     })
-    console.log(res.data)
     setStates(res.data)
   }
 
-  const getCities = async () => {
-    const res = await axios.get(`https://www.universal-tutorial.com/api/cities/${employee.state}`, {
+  const getCities = async (auth_token) => {
+    const res = await axios.get(`https://www.universal-tutorial.com/api/cities/${getValues('state')}`, {
       headers: {
         'Authorization': `Bearer ${auth_token}`,
         "Accept": "application/json"
       }
     })
-    console.log(res.data)
     setCities(res.data)
   }
 
-  const handleChange = (e) => {
-    console.log(e.target.value)
+
+  const handleState = (props, val) => {
+    if (val) {
+      props.field.onChange(val?.state_name);
+    } else {
+      setValue('city',)
+      props.field.onChange(val?.state_name);
+    }
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const submitHandler = (data) => {
+    // e.preventDefault();
     let arr = localStorage.getItem('empList') ? JSON.parse(localStorage.getItem('empList')) : []
-    arr = arr.map(emp => emp.email === employee.email ? employee : emp)
+    arr = arr.map((emp, ind) => ind === location.state.index ? data : emp)
     localStorage.setItem('empList', JSON.stringify(arr))
-    console.log(e)
+    // console.log(e)
     alert('updated successfully!')
     navigate('/')
 
   }
 
-  console.log(employee)
+  console.log(getValues())
 
   return (
-    <Card sx={{ minWidth: 450, maxWidth: 700, margin: '0 auto' }}>
+    <Card sx={{ minWidth: 450, maxWidth: 700, margin: '0 auto', boxShadow: 15, borderRadius: 2 }}>
+      <Typography variant='h4' fontFamily={'serif'} textAlign={'center'} m={1} fontWeight={20}>Update Details</Typography>
       <CardContent>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(submitHandler)}>
           <Grid container spacing={1}>
             <Grid item xs={12} sm={6}>
               <TextField
-                error={false}
                 type='text'
-                id="outlined-error"
+                // id="outlined-error"
                 label="Name"
                 placeholder='Enter full name'
-                value={employee.name}
-                onChange={(e) => setEmployee({ ...employee, name: e.target.value })}
+                // value={employee.name}
+                // onChange={(e) => setEmployee({ ...employee, name: e.target.value })}
+                {...register('name', {
+                  required: 'please enter your name',
+                  pattern: {
+                    value: /^[a-zA-Z]{2,40}( [a-zA-Z]{2,40})+$/,
+                    message: 'please enter valid full name'
+                  }
+                })}
+                error={Boolean(errors.name)}
+                helperText={errors.name?.message}
                 fullWidth
-                required
+
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
-                error={false}
-                type='email'
-                id="outlined-error"
+                // type='email'
+                // id="outlined-error"
                 label="Email"
                 placeholder='Enter your email'
-                value={employee.email}
-                onChange={(e) => setEmployee({ ...employee, email: e.target.value })}
+                // value={employee.email}
+                // onChange={(e) => setEmployee({ ...employee, email: e.target.value })}
+                {...register('email', {
+                  required: 'please enter your email',
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: 'invalid email address'
+                  }
+                })}
+                error={Boolean(errors.email)}
+                helperText={errors.email?.message}
                 fullWidth
-                required
+
               />
             </Grid>
             <Grid item xs={12} sm={12}>
               <TextField
-                error={false}
-                type='number'
-                id="outlined-error"
+                // error={false}
+                type='text'
+                // id="outlined-error"
                 label="Mobile"
-                
                 placeholder='Enter your mobile number'
-                value={employee.mobile}
-                onChange={(e) => setEmployee({ ...employee, mobile: e.target.value })}
+                InputProps={{ inputProps: { maxLength: 10 } }}
+                // value={employee.mobile}
+                // onChange={(e) => setEmployee({ ...employee, mobile: e.target.value })}
+                {...register('mobile', {
+
+                  required: 'please enter valid mobile number',
+                  pattern: {
+                    value: /^[7-9][0-9]{9}$/,
+                    message: 'please enter valid mobile number'
+                  }
+                })}
+                error={Boolean(errors.mobile)}
+                helperText={errors.mobile?.message}
                 fullWidth
-                required
+
               />
             </Grid>
-            {/* <Grid item xs={12} sm={12}>
+            <Grid item xs={12} sm={12}>
               <TextField
                 id="outlined-multiline-flexible"
                 type='text'
                 label="Address"
                 placeholder='Enter your address'
-                value={employee.address}
-                onChange={(e) => setEmployee({ ...employee, address: e.target.value })}
                 multiline
                 fullWidth
                 minRows={2}
                 maxRows={4}
-                required
-              />
-            </Grid> */}
-            <Grid item xs={12} sm={12}>
-              <TextareaAutosize
-                aria-label="minimum height"
-                minRows={3}
-                placeholder="Enter your address"
-                value={employee.address}
-                onChange={(e) => setEmployee({ ...employee, address: e.target.value })}
-                style={{ width: '100%' }}
-                required
+                {...register('address', {
+                  required: 'required'
+                })}
+                error={Boolean(errors.address)}
               />
             </Grid>
+            {/* <Grid item xs={12} sm={12}>
+              <FormControl error={errors.address}>
+                <TextareaAutosize
+                  aria-label="minimum height"
+                  minRows={3}
+                  placeholder="Enter your address"
+                  // value={employee.address}
+                  // onChange={(e) => setEmployee({ ...employee, address: e.target.value })}
+                  {...register('address', {
+                    required: 'required'
+                  })}
+                  style={{ width: '100%' }}
+
+                />
+                <FormHelperText>{errors.address?.message}</FormHelperText>
+              </FormControl>
+            </Grid> */}
             <Grid item xs={12} sm={6}>
-              <Autocomplete
-                disablePortal
-                id="combo-box-demo"
-                options={states.map(states => ({ ...states, label: states.state_name }))}
-                // sx={{ width: 300 }}
-                value={employee.state ? employee.state : ''}
-                onChange={(e, val) => setEmployee({ ...employee, state: val.state_name })}
-                renderInput={(params) => <TextField {...params} label="State" required />}
+              <Controller
+                render={(props) =>
+                  <Autocomplete
+                    disablePortal
+                    // id="combo-box-demo"
+                    options={states.map(states => ({ ...states, label: states.state_name }))}
+                    // sx={{ width: 300 }}
+                    value={getValues('state') ? getValues('state') : ''}
+                    onChange={(e, val) => { handleState(props, val) }}
+                    renderInput={(params) => <TextField {...params} label="State" error={Boolean(errors.state)} helperText={errors.state?.message} />}
+                  />
+                }
+                {...register('state', {
+                  required: 'please select your state'
+                })}
+                control={control}
               />
             </Grid>
 
             <Grid item xs={12} sm={6}>
-              <Autocomplete
-                disablePortal
-                id="combo-box-demo"
-                options={cities.map(city => ({ ...city, label: city.city_name }))}
-                // sx={{ width: 300 }}
-                value={employee.city ? employee.city : ''}
-                onChange={(e, val) => setEmployee({ ...employee, city: val.city_name })}
-                renderInput={(params) => <TextField {...params} label="City" required />}
+              <Controller
+                render={(props, ref) =>
+                  <Autocomplete
+                    disablePortal
+                    // id="combo-box-demo"
+                    options={cities.map(city => ({ ...city, label: city.city_name }))}
+                    // sx={{ width: 300 }}
+                    value={getValues('state') ? getValues('city') : ''}
+                    // defaultValue={''}
+                    onChange={(e, val) => { props.field.onChange(val?.city_name) }}
+
+                    renderInput={(params) => <TextField {...params} label="City" error={Boolean(errors.city)} helperText={errors.city?.message} />}
+                  />
+                }
+                {...register('city', {
+                  required: 'please select your city'
+                })}
+                control={control}
               />
+
             </Grid>
-            <Grid item xs={12} sm={6}>
+            {/* <Grid item xs={12} sm={6}>`
               <TextField
                 id="date"
                 label="Date of Birth"
                 type="date"
-                defaultValue={employee.DOB}
+                // defaultValue="1999-04-16"
                 // sx={{ width: 220 }}
                 InputLabelProps={{
                   shrink: true,
                 }}
-                onChange={(e) => setEmployee({...employee, DOB: e.target.value})}
+                // onChange={(e) => setEmployee({ ...employee, DOB: e.target.value })}
+                {...register('DOB', {
+                  required: 'date of birth is required'
+                })}
+                error={Boolean(errors.DOB)}
+                helperText={errors.DOB?.message}
                 fullWidth
-                required
+
               />
+            </Grid> */}
+            <Grid item xs={12} sm={6}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <FormControl error={Boolean(errors.DOB)}>
+                  <Controller
+                    render={({ field }) =>
+                      <DatePicker
+                        // disableFuture
+                        label="Date of Birth"
+                        openTo="year"
+                        views={['year', 'month', 'day']}
+                        value={getValues('DOB')}
+                        onChange={field.onChange}
+
+                        renderInput={(params) => <TextField {...params} />}
+                      />
+                    }
+                    {...register('DOB', {
+                      required: 'please enter your DOB'
+                    })}
+                    control={control}
+                  />
+                  <FormHelperText>{errors.DOB?.message}</FormHelperText>
+                </FormControl>
+              </LocalizationProvider>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <FormControl>
+              <FormControl error={Boolean(errors.gender)}>
                 <FormLabel id="demo-row-radio-buttons-group-label">Gender</FormLabel>
                 <RadioGroup
                   row
                   aria-labelledby="demo-row-radio-buttons-group-label"
                   name="row-radio-buttons-group"
-                  value={employee.gender}
-                  onChange={(e) => setEmployee({ ...employee, gender: e.target.value })}
+                // value={employee.gender}
+                // onChange={(e) => setEmployee({ ...employee, gender: e.target.value })}
                 >
-                  <FormControlLabel value="female" control={<Radio />} label="Female" />
-                  <FormControlLabel value="male" control={<Radio />} label="Male" />
-                  <FormControlLabel value="other" control={<Radio />} label="Other" />
+                  <FormControlLabel value="female" checked={getValues('gender') === 'female'} control={<Radio {...register('gender', {
+                    required: 'required'
+                  })} />} label="Female" />
+                  <FormControlLabel value="male" checked={getValues('gender') === 'male'} control={<Radio {...register('gender', {
+                    required: 'required'
+                  })} />} label="Male" />
+                  <FormControlLabel value="other" checked={getValues('gender') === 'other'} control={<Radio {...register('gender', {
+                    required: 'please chose your gender'
+                  })} />} label="Other" />
+                  <FormHelperText>{errors.gender?.message}</FormHelperText>
                 </RadioGroup>
+
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={12}>
               <TextField
-                error={false}
+                // error={false}
                 type='password'
                 id="outlined-error"
                 label="Password"
                 placeholder='Enter password'
-                value={employee.password}
-                onChange={(e) => setEmployee({ ...employee, password: e.target.value })}
+                // defaultValue={getValues('password')}
+                // value={employee.password}
+                // onChange={(e) => setEmployee({ ...employee, password: e.target.value })}
+                {...register('password', {
+                  required: 'password is required'
+                })}
                 fullWidth
-                required
+                error={Boolean(errors.password)}
+                helperText={errors.password?.message}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <FormControl component="" variant="standard">
+              <FormControl component="" variant="standard" error={Boolean(errors.hobbies)}>
                 <FormLabel component="">Hobbies:-</FormLabel>
-                <FormGroup sx={{ margin: '0 30px' }}>
+                <FormGroup row>
                   <FormControlLabel
                     control={
-                      <Checkbox checked={employee.hobbies.reading} onChange={() => setEmployee({ ...employee, hobbies: { ...employee.hobbies, reading: !employee.hobbies.reading } })} name="reading" />
+                      <Checkbox defaultChecked={getValues('hobbies').includes('Reading')} value={'Reading'} {...register('hobbies', {
+                        required: 'required'
+                      })} />
                     }
                     label="Reading"
                   />
                   <FormControlLabel
                     control={
-                      <Checkbox checked={employee.hobbies.writing} onChange={() => setEmployee({ ...employee, hobbies: { ...employee.hobbies, writing: !employee.hobbies.writing } })} name="jason" />
+                      <Checkbox defaultChecked={getValues('hobbies').includes('Writing')} value={'Writing'} {...register('hobbies', {
+                        required: 'required'
+                      })} />
                     }
                     label="Writing"
                   />
                   <FormControlLabel
                     control={
-                      <Checkbox checked={employee.hobbies.playing} onChange={() => setEmployee({ ...employee, hobbies: { ...employee.hobbies, playing: !employee.hobbies.playing } })} name="antoine" />
+                      <Checkbox defaultChecked={getValues('hobbies').includes('Playing')} value={'Playing'} {...register('hobbies', {
+                        required: 'Please select at least on hobby'
+                      })} />
                     }
                     label="Playing"
                   />
                 </FormGroup>
-                {/* <FormHelperText>Be careful</FormHelperText> */}
+                <FormHelperText>{errors.hobbies?.message}</FormHelperText>
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <FormLabel>Rate your communication skills:-</FormLabel>
-              <Slider
-                sx={{margin: '20px 0'}}
-                aria-label="CS"
-                defaultValue={employee.cs}
-                // getAriaValueText={valuetext}
-                valueLabelDisplay="auto"
-                onChange={(e) => setEmployee({ ...employee, cs: e.target.value })}
-                step={1}
-                marks
-                min={0}
-                max={5}
-              />
+              <FormControl error={Boolean(errors.cs)}>
+                <FormLabel>Rate your communication skills:-</FormLabel>
+                <Slider
+                  sx={{ margin: '5px 0' }}
+                  aria-label="CS"
+                  defaultValue={Number(getValues('cs'))}
+                  // getAriaValueText={valuetext}
+                  valueLabelDisplay="auto"
+                  // onChange={(e) => setEmployee({ ...employee, cs: e.target.value })}
+                  step={1}
+                  marks
+                  min={0}
+                  max={5}
+                  {...register('cs', {
+                    required: 'please rate your skills'
+                  })}
+                />
+                <FormHelperText>{errors.cs?.message}</FormHelperText>
+              </FormControl>
             </Grid>
-            <Stack alignItems='center'>
-              <Button type='submit' variant='contained' color='primary'>Update</Button>
-            </Stack>
+            <Grid item xs={12} sm={12}>
+              <Box display={'flex'} justifyContent={'center'} alignItems={'center'}>
+                <Button type='submit' variant='contained' color='secondary' >Update</Button>
+              </Box>
+            </Grid>
 
           </Grid>
         </form>

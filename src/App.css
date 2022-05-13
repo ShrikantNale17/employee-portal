@@ -2,8 +2,9 @@
   /* text-align: center; */
   padding: 1em;
   /* margin: 2em; */
-  /* height: 100vh; */
-  background-color: rgb(231, 226, 220);
+  min-height: 95vh;
+  /* max-height: 100vh; */
+  background-color: rgb(247, 244, 242);
 }
 
 i{
